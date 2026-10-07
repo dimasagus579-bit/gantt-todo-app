@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt Chart Todo List & Kalender</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-full flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-chart-gantt text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">PlanGantt Pro</h1>
+                    <p class="text-xs text-slate-500">Todo List & Interactive Gantt Schedule</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button onclick="openTaskModal()" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition shadow-sm shadow-indigo-100">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Tambah Kegiatan</span>
+                </button>
+                <button onclick="resetData()" title="Reset Data" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 overflow-hidden">
+        
+        <!-- Controls & Tab Switcher -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+            <!-- View Tabs -->
+            <div class="flex bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+                <button onclick="switchTab('gantt')" id="tab-gantt" class="px-4 py-2 rounded-lg text-sm font-semibold transition bg-white text-indigo-600 shadow-xs">
+                    <i class="fa-solid fa-chart-gantt mr-2"></i>Diagram Gantt
+                </button>
+                <button onclick="switchTab('calendar')" id="tab-calendar" class="px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:text-slate-900">
+                    <i class="fa-solid fa-calendar-days mr-2"></i>Kalender
+                </button>
+                <button onclick="switchTab('list')" id="tab-list" class="px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:text-slate-900">
+                    <i class="fa-solid fa-list-check mr-2"></i>Daftar Todo
+                </button>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center space-x-4 text-xs font-medium text-slate-600 overflow-x-auto pb-1 sm:pb-0">
+                <div class="flex items-center space-x-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                    <span>Total: <strong id="stat-total" class="text-slate-900">0</strong></span>
+                </div>
+                <div class="flex items-center space-x-1.5 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span>Proses: <strong id="stat-progress" class="text-amber-700">0</strong></span>
+                </div>
+                <div class="flex items-center space-x-1.5 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span>Selesai: <strong id="stat-completed" class="text-emerald-700">0</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Views Container -->
+        <div class="flex-1 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+            
+            <!-- VIEW 1: GANTT CHART -->
+            <div id="view-gantt" class="flex-1 flex flex-col h-full overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Timeline Diagram Gantt</h2>
+                        <p class="text-xs text-slate-500">Visualisasi jadwal kegiatan dari tanggal mulai hingga selesai.</p>
+                    </div>
+                    <!-- Timeline Zoom / Range -->
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="text-slate-500 font-medium">Filter Kategori:</span>
+                        <select id="gantt-filter" onchange="renderViews()" class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="all">Semua Kategori</option>
+                            <option value="Proyek Kerja">Proyek Kerja</option>
+                            <option value="Pribadi">Pribadi</option>
+                            <option value="Belajar">Belajar</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-auto p-6" id="gantt-container">
+                    <!-- Dynamic Gantt Chart rendered via JS -->
+                </div>
+            </div>
+
+            <!-- VIEW 2: CALENDAR -->
+            <div id="view-calendar" class="flex-1 flex flex-col h-full overflow-hidden hidden">
+                <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                    <div class="flex items-center space-x-4">
+                        <h2 id="calendar-month-year" class="text-base font-bold text-slate-900">Oktober 2026</h2>
+                        <div class="flex items-center space-x-1 border border-slate-200 rounded-lg bg-white overflow-hidden shadow-xs">
+                            <button onclick="changeMonth(-1)" class="px-3 py-1.5 hover:bg-slate-100 text-slate-600 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                            <button onclick="goToCurrentMonth()" class="px-3 py-1.5 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition border-x border-slate-200">Hari Ini</button>
+                            <button onclick="changeMonth(1)" class="px-3 py-1.5 hover:bg-slate-100 text-slate-600 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-500 hidden sm:block">Klik pada tanggal untuk tambah kegiatan baru</div>
+                </div>
+
+                <div class="flex-1 overflow-auto p-6 flex flex-col">
+                    <!-- Days header -->
+                    <div class="grid grid-cols-7 gap-2 mb-2 text-center font-semibold text-xs text-slate-500">
+                        <div>Senin</div>
+                        <div>Selasa</div>
+                        <div>Rabu</div>
+                        <div>Kamis</div>
+                        <div>Jumat</div>
+                        <div>Sabtu</div>
+                        <div>Minggu</div>
+                    </div>
+                    <!-- Calendar Grid -->
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-2 flex-1 auto-rows-fr">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: TODO LIST -->
+            <div id="view-list" class="flex-1 flex flex-col h-full overflow-hidden hidden">
+                <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Daftar Kegiatan (Todo)</h2>
+                        <p class="text-xs text-slate-500">Kelola status selesai dan rincian kegiatan harian Anda.</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="search-input" oninput="renderViews()" placeholder="Cari kegiatan..." class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48">
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-auto p-6">
+                    <div id="todo-list-container" class="space-y-3">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="task-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden border border-slate-200 transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 id="modal-title" class="font-bold text-slate-900 text-base">Tambah Kegiatan Baru</h3>
+                <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-600 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="task-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="task-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Kegiatan *</label>
+                    <input type="text" id="task-title" required placeholder="Contoh: Desain Antarmuka Aplikasi" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Mulai *</label>
+                        <input type="date" id="task-start" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Selesai *</label>
+                        <input type="date" id="task-end" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
+                        <select id="task-category" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                            <option value="Proyek Kerja">Proyek Kerja</option>
+                            <option value="Pribadi">Pribadi</option>
+                            <option value="Belajar">Belajar</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Prioritas</label>
+                        <select id="task-priority" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                            <option value="Tinggi">Tinggi</option>
+                            <option value="Sedang" selected>Sedang</option>
+                            <option value="Rendah">Rendah</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan / Deskripsi</label>
+                    <textarea id="task-desc" rows="3" placeholder="Rincian tambahan kegiatan..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"></textarea>
+                </div>
+                <div class="pt-2 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm transition">Simpan Kegiatan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="message-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center border border-slate-200">
+            <div id="msg-icon" class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fa-solid fa-info"></i>
+            </div>
+            <h3 id="msg-title" class="font-bold text-slate-900 text-base mb-1">Pemberitahuan</h3>
+            <p id="msg-text" class="text-sm text-slate-600 mb-6">Pesan informasi disini.</p>
+            <button onclick="closeMessageModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition shadow-sm">Mengerti</button>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let tasks = JSON.parse(localStorage.getItem('gantt_tasks')) || [
+            { id: '1', title: 'Analisis Kebutuhan Sistem', start: '2026-10-01', end: '2026-10-05', category: 'Proyek Kerja', priority: 'Tinggi', completed: true, desc: 'Wawancara stakeholder & menyusun SRS' },
+            { id: '2', title: 'Desain Wireframe UI/UX', start: '2026-10-04', end: '2026-10-10', category: 'Proyek Kerja', priority: 'Tinggi', completed: false, desc: 'Membuat mockup di Figma' },
+            { id: '3', title: 'Implementasi Frontend', start: '2026-10-09', end: '2026-10-18', category: 'Proyek Kerja', priority: 'Sedang', completed: false, desc: 'Coding HTML/Tailwind & integrasi JavaScript' },
+            { id: '4', title: 'Belajar Algoritma Lanjutan', start: '2026-10-12', end: '2026-10-20', category: 'Belajar', priority: 'Rendah', completed: false, desc: 'Fokus pada struktur data graph & tree' },
+            { id: '5', title: 'Uji Coba & Deploy Aplikasi', start: '2026-10-19', end: '2026-10-25', category: 'Proyek Kerja', priority: 'Tinggi', completed: false, desc: 'Testing bug dan deployment server' }
+        ];
+
+        let currentTab = 'gantt';
+        let currentCalendarDate = new Date(2026, 9, 1); // Oktober 2026
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            renderViews();
+        });
+
+        // Save to localStorage
+        function saveTasks() {
+            localStorage.setItem('gantt_tasks', JSON.stringify(tasks));
+            renderViews();
+        }
+
+        // Custom Message Box (Replacement for alert)
+        function showMessage(title, text, isError = false) {
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-text').innerText = text;
+            const iconDiv = document.getElementById('msg-icon');
+            if (isError) {
+                iconDiv.className = "w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 text-xl";
+                iconDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else {
+                iconDiv.className = "w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 text-xl";
+                iconDiv.innerHTML = '<i class="fa-solid fa-info"></i>';
+            }
+            document.getElementById('message-modal').classList.remove('hidden');
+        }
+
+        function closeMessageModal() {
+            document.getElementById('message-modal').classList.add('hidden');
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            currentTab = tab;
+            ['gantt', 'calendar', 'list'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const view = document.getElementById(`view-${t}`);
+                if (t === tab) {
+                    btn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition bg-white text-indigo-600 shadow-xs";
+                    view.classList.remove('hidden');
+                } else {
+                    btn.className = "px-4 py-2 rounded-lg text-sm font-medium transition text-slate-600 hover:text-slate-900";
+                    view.classList.add('hidden');
+                }
+            });
+            renderViews();
+        }
+
+        // Render Views & Stats
+        function renderViews() {
+            updateStats();
+            renderGanttChart();
+            renderCalendar();
+            renderTodoList();
+        }
+
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.completed).length;
+            const progress = total - completed;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-completed').innerText = completed;
+            document.getElementById('stat-progress').innerText = progress;
+        }
+
+        // 1. RENDER GANTT CHART
+        function renderGanttChart() {
+            const container = document.getElementById('gantt-container');
+            const filterCat = document.getElementById('gantt-filter').value;
+
+            let filteredTasks = tasks;
+            if (filterCat !== 'all') {
+                filteredTasks = tasks.filter(t => t.category === filterCat);
+            }
+
+            if (filteredTasks.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-64 text-slate-400">
+                        <i class="fa-solid fa-folder-open text-4xl mb-2"></i>
+                        <p class="text-sm font-medium">Tidak ada kegiatan untuk ditampilkan dalam diagram Gantt.</p>
+                    </div>`;
+                return;
+            }
+
+            // Determine min date and max date across all filtered tasks
+            let minDate = new Date(Math.min(...filteredTasks.map(t => new Date(t.start))));
+            let maxDate = new Date(Math.max(...filteredTasks.map(t => new Date(t.end))));
+
+            // Add padding days
+            minDate.setDate(minDate.getDate() - 2);
+            maxDate.setDate(maxDate.getDate() + 4);
+
+            // Generate list of days between minDate and maxDate
+            let days = [];
+            let curr = new Date(minDate);
+            while (curr <= maxDate) {
+                days.push(new Date(curr));
+                curr.setDate(curr.getDate() + 1);
+            }
+
+            const dayWidth = 36; // width in pixels per day column
+            const totalWidth = days.length * dayWidth;
+
+            let html = `
+                <div class="overflow-x-auto pb-4">
+                    <div class="min-w-max">
+                        <!-- Timeline Header (Dates) -->
+                        <div class="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
+                            <div class="w-64 p-3 font-semibold text-xs text-slate-600 border-r border-slate-200 sticky left-0 bg-slate-50 z-20">Daftar Kegiatan</div>
+                            <div class="flex" style="width: ${totalWidth}px;">`;
+            
+            days.forEach((d, idx) => {
+                let isToday = new Date().toDateString() === d.toDateString();
+                let dayNum = d.getDate();
+                let monthShort = d.toLocaleString('id-ID', { month: 'short' });
+                html += `
+                    <div class="text-center border-r border-slate-200 py-2 text-xs ${isToday ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500'}" style="width: ${dayWidth}px;">
+                        <span class="block">${dayNum}</span>
+                        <span class="block text-[10px] text-slate-400 uppercase">${monthShort}</span>
+                    </div>`;
+            });
+
+            html += `</div></div>`;
+
+            // Timeline Rows (Tasks)
+            filteredTasks.forEach((task, index) => {
+                let taskStart = new Date(task.start);
+                let taskEnd = new Date(task.end);
+
+                // Calculate offset and duration in days
+                let diffTime = taskStart - minDate;
+                let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                let durationTime = taskEnd - taskStart;
+                let durationDays = Math.max(1, Math.floor(durationTime / (1000 * 60 * 60 * 24)) + 1);
+
+                let leftPx = diffDays * dayWidth;
+                let widthPx = durationDays * dayWidth;
+
+                let categoryColors = {
+                    'Proyek Kerja': 'bg-indigo-500 border-indigo-600 text-white',
+                    'Pribadi': 'bg-emerald-500 border-emerald-600 text-white',
+                    'Belajar': 'bg-amber-500 border-amber-600 text-white',
+                    'Lainnya': 'bg-purple-500 border-purple-600 text-white'
+                };
+                let barColor = categoryColors[task.category] || 'bg-blue-500 border-blue-600 text-white';
+                if (task.completed) barColor = 'bg-slate-400 border-slate-500 text-white line-through opacity-75';
+
+                html += `
+                    <div class="flex items-center border-b border-slate-100 hover:bg-slate-50/80 transition group">
+                        <div class="w-64 p-3 border-r border-slate-200 sticky left-0 bg-white group-hover:bg-slate-50/80 z-10 flex items-center justify-between">
+                            <div class="truncate pr-2">
+                                <span class="block text-xs font-bold text-slate-800 truncate">${task.title}</span>
+                                <span class="text-[10px] text-slate-400">${task.start} s/d ${task.end}</span>
+                            </div>
+                            <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-150 transition">
+                                <button onclick="editTask('${task.id}')" title="Edit" class="p-1 text-slate-400 hover:text-indigo-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                                <button onclick="deleteTask('${task.id}')" title="Hapus" class="p-1 text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div class="relative h-12 flex items-center" style="width: ${totalWidth}px;">
+                            <!-- Grid background vertical guidelines -->
+                            <div class="absolute inset-0 flex pointer-events-none">`;
+                
+                days.forEach(d => {
+                    html += `<div class="border-r border-slate-100 h-full" style="width: ${dayWidth}px;"></div>`;
+                });
+
+                html += `</div>
+                            <!-- Gantt Bar -->
+                            <div class="absolute h-7 rounded-lg ${barColor} shadow-xs px-3 flex items-center text-xs font-medium cursor-pointer transition hover:brightness-105"
+                                 style="left: ${leftPx}px; width: ${widthPx}px;"
+                                 onclick="editTask('${task.id}')"
+                                 title="${task.title} (${task.start} - ${task.end})">
+                                <span class="truncate">${task.title}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        // 2. RENDER CALENDAR VIEW
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const monthYearLabel = document.getElementById('calendar-month-year');
+
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            monthYearLabel.innerText = `${monthNames[month]} ${year}`;
+
+            // First day of month
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            // Adjust for Monday start (0 = Senin, 6 = Minggu)
+            const adjustedFirstDay = (firstDayIndex === 0) ? 6 : firstDayIndex - 1;
+
+            // Total days in month
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            // Total days in prev month
+            const prevTotalDays = new Date(year, month, 0).getDate();
+
+            let html = '';
+
+            // Previous month padding days
+            for (let i = adjustedFirstDay - 1; i >= 0; i--) {
+                let dayNum = prevTotalDays - i;
+                html += `
+                    <div class="bg-slate-50/50 border border-slate-200/60 rounded-xl p-2 flex flex-col opacity-40 min-h-[90px]">
+                        <span class="text-xs font-semibold text-slate-400">${dayNum}</span>
+                    </div>`;
+            }
+
+            // Current month days
+            for (let d = 1; d <= totalDays; d++) {
+                let dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                let isToday = new Date().toISOString().slice(0,10) === dateStr;
+
+                // Find tasks matching or spanning this date
+                let dayTasks = tasks.filter(t => dateStr >= t.start && dateStr <= t.end);
+
+                let tasksHtml = '';
+                dayTasks.forEach(t => {
+                    let badgeColor = t.completed ? 'bg-slate-200 text-slate-600 line-through' : 'bg-indigo-100 text-indigo-700 font-medium';
+                    tasksHtml += `
+                        <div onclick="event.stopPropagation(); editTask('${t.id}')" class="text-[10px] px-1.5 py-0.5 rounded truncate mb-0.5 cursor-pointer hover:opacity-80 transition ${badgeColor}">
+                            ${t.title}
+                        </div>`;
+                });
+
+                html += `
+                    <div onclick="openTaskModalWithDate('${dateStr}')" class="bg-white border ${isToday ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'} rounded-xl p-2 flex flex-col min-h-[90px] cursor-pointer hover:border-indigo-300 transition group">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold ${isToday ? 'bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center' : 'text-slate-700'}">${d}</span>
+                            <button class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 text-xs"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="flex-1 overflow-y-auto space-y-1">
+                            ${tasksHtml}
+                        </div>
+                    </div>`;
+            }
+
+            // Next month padding days to fill grid up to 35 or 42 cells
+            let totalCells = adjustedFirstDay + totalDays;
+            let nextDaysCount = (totalCells <= 35) ? (35 - totalCells) : (42 - totalCells);
+            for (let i = 1; i <= nextDaysCount; i++) {
+                html += `
+                    <div class="bg-slate-50/50 border border-slate-200/60 rounded-xl p-2 flex flex-col opacity-40 min-h-[90px]">
+                        <span class="text-xs font-semibold text-slate-400">${i}</span>
+                    </div>`;
+            }
+
+            grid.innerHTML = html;
+        }
+
+        function changeMonth(direction) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function goToCurrentMonth() {
+            currentCalendarDate = new Date();
+            renderCalendar();
+        }
+
+        // 3. RENDER TODO LIST VIEW
+        function renderTodoList() {
+            const container = document.getElementById('todo-list-container');
+            const searchVal = document.getElementById('search-input').value.toLowerCase();
+
+            let filtered = tasks.filter(t => t.title.toLowerCase().includes(searchVal) || t.desc.toLowerCase().includes(searchVal));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-48 text-slate-400">
+                        <i class="fa-solid fa-clipboard-list text-3xl mb-2"></i>
+                        <p class="text-sm font-medium">Tidak ada kegiatan ditemukan.</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(t => {
+                let priorityColors = {
+                    'Tinggi': 'bg-rose-50 text-rose-700 border-rose-200',
+                    'Sedang': 'bg-amber-50 text-amber-700 border-amber-200',
+                    'Rendah': 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                };
+
+                html += `
+                    <div class="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition ${t.completed ? 'bg-slate-50/60' : ''}">
+                        <div class="flex items-start space-x-3.5 flex-1 pr-4">
+                            <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTaskStatus('${t.id}')" class="mt-1 w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <h4 class="text-sm font-bold text-slate-900 ${t.completed ? 'line-through text-slate-400' : ''}">${t.title}</h4>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-md font-medium border ${priorityColors[t.priority]}">${t.priority}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-md font-medium bg-slate-100 text-slate-600">${t.category}</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-2">${t.desc || 'Tidak ada catatan.'}</p>
+                                <div class="flex items-center space-x-4 text-[11px] text-slate-400">
+                                    <span><i class="fa-regular fa-calendar mr-1"></i>Mulai: ${t.start}</span>
+                                    <span><i class="fa-regular fa-calendar-check mr-1"></i>Selesai: ${t.end}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="editTask('${t.id}')" class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button onclick="deleteTask('${t.id}')" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                    </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Modal Functions
+        function openTaskModal() {
+            document.getElementById('modal-title').innerText = "Tambah Kegiatan Baru";
+            document.getElementById('task-id').value = "";
+            document.getElementById('task-title').value = "";
+            document.getElementById('task-start').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('task-end').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('task-category').value = "Proyek Kerja";
+            document.getElementById('task-priority').value = "Sedang";
+            document.getElementById('task-desc').value = "";
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function openTaskModalWithDate(dateStr) {
+            openTaskModal();
+            document.getElementById('task-start').value = dateStr;
+            document.getElementById('task-end').value = dateStr;
+        }
+
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            document.getElementById('modal-title').innerText = "Edit Kegiatan";
+            document.getElementById('task-id').value = task.id;
+            document.getElementById('task-title').value = task.title;
+            document.getElementById('task-start').value = task.start;
+            document.getElementById('task-end').value = task.end;
+            document.getElementById('task-category').value = task.category;
+            document.getElementById('task-priority').value = task.priority;
+            document.getElementById('task-desc').value = task.desc;
+            document.getElementById('task-modal').classList.remove('hidden');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('task-modal').classList.add('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('task-id').value;
+            const title = document.getElementById('task-title').value;
+            const start = document.getElementById('task-start').value;
+            const end = document.getElementById('task-end').value;
+            const category = document.getElementById('task-category').value;
+            const priority = document.getElementById('task-priority').value;
+            const desc = document.getElementById('task-desc').value;
+
+            if (start > end) {
+                showMessage("Kesalahan Tanggal", "Tanggal mulai tidak boleh melebihi tanggal selesai.", true);
+                return;
+            }
+
+            if (id) {
+                // Update
+                tasks = tasks.map(t => t.id === id ? { ...t, title, start, end, category, priority, desc } : t);
+            } else {
+                // Create
+                const newTask = {
+                    id: Date.now().toString(),
+                    title,
+                    start,
+                    end,
+                    category,
+                    priority,
+                    desc,
+                    completed: false
+                };
+                tasks.push(newTask);
+            }
+
+            saveTasks();
+            closeTaskModal();
+        }
+
+        function toggleTaskStatus(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            saveTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+        }
+
+        function resetData() {
+            if (confirm("Reset seluruh data kegiatan ke awal?")) {
+                localStorage.removeItem('gantt_tasks');
+                location.reload();
+            }
+        }
+    </script>
+
+</body>
+</html>
